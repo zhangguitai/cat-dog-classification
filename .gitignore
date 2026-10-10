@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.log
+
+# 模型权重（较大，按需提交）
+*.pth
+*.pt
+
+# 数据集与压缩包（体积大，不入库）
+datasets/
+CUB_200_subset/
+猫狗数据集100张/
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp

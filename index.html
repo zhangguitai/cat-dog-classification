@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>猫狗分类器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .upload-area {
+      border: 3px dashed #ccc;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 20px;
+    }
+    .upload-area:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+    .upload-area.has-image {
+      padding: 0;
+      border-style: solid;
+    }
+    .upload-area img {
+      max-width: 100%;
+      border-radius: 10px;
+    }
+    .upload-icon {
+      font-size: 48px;
+      color: #bbb;
+      margin-bottom: 10px;
+    }
+    .upload-text {
+      color: #888;
+      font-size: 15px;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .result-label {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .result-label.cat { color: #e74c3c; }
+    .result-label.dog { color: #3498db; }
+    .result-confidence {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    .bar-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .bar-label {
+      width: 40px;
+      font-size: 14px;
+      color: #555;
+    }
+    .bar-bg {
+      flex: 1;
+      height: 24px;
+      background: #eee;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 12px;
+      transition: width 0.6s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-size: 12px;
+      color: #fff;
+      font-weight: 600;
+    }
+    .bar-fill.cat { background: #e74c3c; }
+    .bar-fill.dog { background: #3498db; }
+    .loading {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+      color: #888;
+    }
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 4px solid #ddd;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #fileInput { display: none; }
+    .camera-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+      color: #555;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .camera-btn:hover { border-color: #667eea; color: #667eea; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐱 猫狗分类器 🐶</h1>
+    <p class="subtitle">基于 ResNet18 迁移学习 · 上传或拍照即可识别</p>
+
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">点击或拖拽图片到此处</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" capture="environment">
+
+    <button class="camera-btn" onclick="document.getElementById('fileInput').click()">
+      📷 拍照 / 选择图片
+    </button>
+
+    <div style="height: 16px"></div>
+    <button class="btn" id="predictBtn" disabled>开始识别</button>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p style="margin-top:10px">正在识别中...</p>
+    </div>
+
+    <div class="result" id="result">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-confidence" id="resultConf"></div>
+      <div class="bar-container">
+        <div class="bar-row">
+          <span class="bar-label">🐱 猫</span>
+          <div class="bar-bg"><div class="bar-fill cat" id="catBar"></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">🐶 狗</span>
+          <div class="bar-bg"><div class="bar-fill dog" id="dogBar"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const predictBtn = document.getElementById('predictBtn');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    let selectedFile = null;
+
+    // 点击上传区域触发文件选择
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // 拖拽支持
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); });
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        uploadArea.innerHTML = `<img src="${e.target.result}" alt="preview">`;
+        uploadArea.classList.add('has-image');
+        predictBtn.disabled = false;
+        result.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    predictBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      predictBtn.disabled = true;
+      loading.style.display = 'block';
+      result.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await fetch('/predict', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        loading.style.display = 'none';
+        result.style.display = 'block';
+
+        const label = document.getElementById('resultLabel');
+        const conf = document.getElementById('resultConf');
+        const catBar = document.getElementById('catBar');
+        const dogBar = document.getElementById('dogBar');
+
+        const isCat = data.prediction === '猫';
+        label.textContent = isCat ? '🐱 猫' : '🐶 狗';
+        label.className = 'result-label ' + (isCat ? 'cat' : 'dog');
+        conf.textContent = '置信度: ' + data.confidence;
+
+        const catPct = parseFloat(data.probabilities.cat);
+        const dogPct = parseFloat(data.probabilities.dog);
+        catBar.style.width = catPct + '%';
+        dogBar.style.width = dogPct + '%';
+        catBar.textContent = catPct.toFixed(1) + '%';
+        dogBar.textContent = dogPct.toFixed(1) + '%';
+      } catch (err) {
+        loading.style.display = 'none';
+        alert('识别失败: ' + err.message);
+      } finally {
+        predictBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
